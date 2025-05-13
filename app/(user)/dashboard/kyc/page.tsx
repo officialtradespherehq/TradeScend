@@ -46,9 +46,15 @@ export default function KYCPage() {
         const userDoc = await getDoc(doc(db, "Users", user.uid))
         if (userDoc.exists()) {
           const userData = userDoc.data()
-          setKycStatus(userData.kycVerified ? "approved" : "pending")
-          if (userData.kycData) {
+          
+          // Check if user has submitted KYC data
+          if (userData.kycData && Object.keys(userData.kycData).length > 0) {
+            // If KYC data exists, check if it's approved or pending
+            setKycStatus(userData.kycVerified ? "approved" : "pending")
             reset(userData.kycData)
+          } else {
+            // No KYC data submitted yet - show the form
+            setKycStatus(null)
           }
         }
       } catch (error) {
@@ -93,7 +99,7 @@ export default function KYCPage() {
       try {
         await notifyKycSubmission({
           userName: userName || data.fullName,
-          userEmail: userEmail,
+          userEmail: userEmail || undefined, // Convert null to undefined to match expected type
           userId: user.uid,
           kycData: data
         })
