@@ -8,16 +8,25 @@ import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Switch } from "@/components/ui/switch"
-import { AlertCircle, KeyRound, User, Wallet } from "lucide-react"
+import { AlertCircle, CheckCircle, KeyRound, User, Wallet, X } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { useAuth } from "@/hooks/use-auth"
 import { doc, updateDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { toast } from "sonner"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 export default function SettingsPage() {
   const { user } = useAuth()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [successMessage, setSuccessMessage] = useState("")
   const [profileData, setProfileData] = useState({
     fullName: user?.name || "",
     email: user?.email || "",
@@ -70,6 +79,8 @@ export default function SettingsPage() {
       })
 
       toast.success("Profile updated successfully")
+      setSuccessMessage("Your profile has been updated successfully!")
+      setShowSuccessModal(true)
     } catch (error) {
       toast.error("Failed to update profile")
       console.error("Error updating profile:", error)
@@ -91,6 +102,8 @@ export default function SettingsPage() {
         newPassword: "",
         confirmPassword: "",
       }))
+      setSuccessMessage("Your security settings have been updated successfully!")
+      setShowSuccessModal(true)
     } catch (error) {
       toast.error("Failed to update security settings")
       console.error("Error updating security settings:", error)
@@ -116,6 +129,8 @@ export default function SettingsPage() {
       })
 
       toast.success("Wallet addresses updated successfully")
+      setSuccessMessage("Your wallet addresses have been updated successfully!")
+      setShowSuccessModal(true)
     } catch (error) {
       toast.error("Failed to update wallet addresses")
       console.error("Error updating wallet addresses:", error)
@@ -126,6 +141,31 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-8 p-4">
+      {/* Success Modal */}
+      <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
+        <DialogContent className="sm:max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle className="h-6 w-6 text-green-500" />
+              Success
+            </DialogTitle>
+            <DialogDescription>
+              {successMessage}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-center py-4">
+            <CheckCircle className="h-24 w-24 text-green-500 animate-pulse" />
+          </div>
+          <div className="flex justify-end">
+            <Button 
+              onClick={() => setShowSuccessModal(false)} 
+              className="rounded-2xl">
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      
       <div>
         <h2 className="text-2xl font-bold tracking-tight">Settings</h2>
         <p className="text-muted-foreground">Manage your account settings and preferences.</p>
