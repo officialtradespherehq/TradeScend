@@ -10,6 +10,7 @@ type Investment = {
   amount: number;
   paymentMethod: string;
   transactionHash: string;
+  receiptUrl?: string;
   uid: string;
   status: string;
   timestamp: Timestamp;
@@ -25,6 +26,7 @@ export type InvestmentData = {
   amount: number;
   paymentMethod: string;
   transactionHash: string;
+  receiptUrl?: string;
 };
 
 export function useInvestments() {
