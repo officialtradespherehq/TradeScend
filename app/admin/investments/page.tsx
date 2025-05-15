@@ -4,6 +4,8 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import Image from "next/image"
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
 import { collection, query, getDocs, doc, updateDoc, where } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { toast } from "sonner"
@@ -21,6 +23,7 @@ interface Investment {
   max: number
   paymentMethod: string
   transactionHash: string
+  receiptUrl?: string
   userEmail?: string
   userName?: string
 }
@@ -140,6 +143,36 @@ export default function InvestmentsPage() {
                     <p>Created: {investment.timestamp?.toLocaleDateString() || 'Unknown'}</p>
                     <p>Last Payout: {investment.lastPayout?.toLocaleDateString() || 'None'}</p>
                     <p>Transaction Hash: <span className="break-all">{investment.transactionHash || 'N/A'}</span></p>
+                    {investment.receiptUrl && (
+                      <div className="mt-2">
+                        <p className="mb-1">Payment Receipt:</p>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <div className="relative w-24 h-24 rounded cursor-pointer hover:opacity-80 border border-border overflow-hidden">
+                              <Image 
+                                src={investment.receiptUrl} 
+                                alt="Payment Receipt" 
+                                fill 
+                                className="object-cover"
+                              />
+                              <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                                <span className="text-xs text-white font-medium">View</span>
+                              </div>
+                            </div>
+                          </DialogTrigger>
+                          <DialogContent className="sm:max-w-md">
+                            <div className="relative w-full h-[500px]">
+                              <Image 
+                                src={investment.receiptUrl} 
+                                alt="Payment Receipt" 
+                                fill 
+                                className="object-contain"
+                              />
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
