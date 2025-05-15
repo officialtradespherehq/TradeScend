@@ -10,6 +10,7 @@ import { collection, query, getDocs, doc, updateDoc, where } from "firebase/fire
 import { db } from "@/lib/firebase"
 import { toast } from "sonner"
 import { AdminNav } from "@/components/admin-nav"
+import { ArrowDownTrayIcon } from "@heroicons/react/24/outline"
 
 interface Investment {
   id: string
@@ -168,6 +169,18 @@ export default function InvestmentsPage() {
                                 fill 
                                 className="object-contain"
                               />
+                            </div>
+                            <div className="mt-4 flex justify-end">
+                              <a 
+                                href={investment.receiptUrl} 
+                                download="payment_receipt.jpg"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-md hover:bg-primary/90"
+                              >
+                                <ArrowDownTrayIcon className="h-4 w-4" />
+                                Download
+                              </a>
                             </div>
                           </DialogContent>
                         </Dialog>
