@@ -9,7 +9,9 @@ import { db } from "@/lib/firebase"
 import { useAuth } from "@/hooks/use-auth"
 import { toast } from "sonner"
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts"
-import { ArrowUpIcon, ArrowDownIcon, UserIcon, CheckCircleIcon } from "@heroicons/react/24/outline"
+import { ArrowUpIcon, ArrowDownIcon, UserIcon, CheckCircleIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline"
+import Image from "next/image"
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
 
 interface KYCRequest {
   id: string
@@ -24,6 +26,7 @@ interface KYCRequest {
   postalCode: string
   status: string
   userId: string
+  documentUrl?: string
 }
 
 interface WithdrawalRequest {
@@ -83,12 +86,16 @@ export default function AdminPage() {
           where("kycData", "!=", null)
         )
         const kycSnapshot = await getDocs(kycQuery)
-        const kycData = kycSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data().kycData,
-          status: "pending",
-          userId: doc.id,
-        })) as KYCRequest[]
+        const kycData = kycSnapshot.docs.map((doc) => {
+          const userData = doc.data();
+          return {
+            id: doc.id,
+            ...userData.kycData,
+            status: "pending",
+            userId: doc.id,
+            documentUrl: userData.kycData?.documentUrl || null,
+          };
+        }) as KYCRequest[]
         setKycRequests(kycData)
 
         // Fetch withdrawal requests
@@ -360,6 +367,48 @@ export default function AdminPage() {
                         <p>Postal Code: {request.postalCode}</p>
                       </div>
                     </div>
+                    {request.documentUrl && (
+                      <div className="col-span-2 mt-4">
+                        <p className="font-medium mb-2">Identification Document:</p>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <div className="relative w-32 h-32 rounded cursor-pointer hover:opacity-80 border border-border overflow-hidden">
+                              <Image 
+                                src={request.documentUrl} 
+                                alt="Identification Document" 
+                                fill 
+                                className="object-cover"
+                              />
+                              <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                                <span className="text-xs text-white font-medium">View Document</span>
+                              </div>
+                            </div>
+                          </DialogTrigger>
+                          <DialogContent className="sm:max-w-md">
+                            <div className="relative w-full h-[500px]">
+                              <Image 
+                                src={request.documentUrl} 
+                                alt="Identification Document" 
+                                fill 
+                                className="object-contain"
+                              />
+                            </div>
+                            <div className="mt-4 flex justify-end">
+                              <a 
+                                href={request.documentUrl} 
+                                download="kyc_document.jpg"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-md hover:bg-primary/90"
+                              >
+                                <ArrowDownTrayIcon className="h-4 w-4" />
+                                Download
+                              </a>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      </div>
+                    )}
                   </div>
                   <div className="mt-4 flex gap-2">
                     <Button

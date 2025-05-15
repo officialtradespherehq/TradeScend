@@ -9,7 +9,9 @@ import { Input } from "@/components/ui/input"
 import { collection, query, getDocs, doc, updateDoc, orderBy, where, deleteDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { toast } from "sonner"
-import { ArrowUpIcon, ArrowDownIcon, RefreshCwIcon, CheckIcon, XIcon, SearchIcon, Trash2Icon } from "lucide-react"
+import { ArrowUpIcon, ArrowDownIcon, RefreshCwIcon, CheckIcon, XIcon, SearchIcon, Trash2Icon, Download } from "lucide-react"
+import Image from "next/image"
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
 
 interface Transaction {
   id: string
@@ -21,6 +23,7 @@ interface Transaction {
   description?: string
   userName?: string
   userEmail?: string
+  receiptUrl?: string
 }
 
 export default function TransactionsPage() {
@@ -65,7 +68,8 @@ export default function TransactionsPage() {
             uid: data.uid,
             description: data.description,
             userName: userData?.name || "Unknown User",
-            userEmail: userData?.email || "No Email"
+            userEmail: userData?.email || "No Email",
+            receiptUrl: data.receiptUrl || null
           } as Transaction
         })
       )
@@ -297,6 +301,50 @@ export default function TransactionsPage() {
                     <div className="text-sm space-y-1">
                       <p>Transaction ID: {transaction.id}</p>
                       <p>Description: {transaction.description || "N/A"}</p>
+                      
+                      {transaction.type === 'deposit' && transaction.receiptUrl && (
+                        <div className="mt-2">
+                          <p className="mb-1">Payment Receipt:</p>
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <div className="relative w-24 h-24 rounded cursor-pointer hover:opacity-80 border border-border overflow-hidden">
+                                <Image 
+                                  src={transaction.receiptUrl} 
+                                  alt="Payment Receipt" 
+                                  fill 
+                                  className="object-cover"
+                                />
+                                <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                                  <span className="text-xs text-white font-medium">View</span>
+                                </div>
+                              </div>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-md">
+                              <div className="relative w-full h-[500px]">
+                                <Image 
+                                  src={transaction.receiptUrl} 
+                                  alt="Payment Receipt" 
+                                  fill 
+                                  className="object-contain"
+                                />
+                              </div>
+                              <div className="mt-4 flex justify-end">
+                                <a 
+                                  href={transaction.receiptUrl} 
+                                  download="payment_receipt.jpg"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-md hover:bg-primary/90"
+                                >
+                                  <Download className="h-4 w-4" />
+                                  Download
+                                </a>
+                              </div>
+                            </DialogContent>
+                          </Dialog>
+                        </div>
+                      )}
+                      
                       <div className="mt-3 flex flex-wrap gap-2">
                         {transaction.status !== 'completed' && (
                           <Button
