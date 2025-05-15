@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -12,8 +12,10 @@ import { doc, setDoc, getDoc, updateDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { useAuth } from "@/hooks/use-auth"
 import { useForm } from "react-hook-form"
-import { CheckCircle2, Clock } from "lucide-react"
+import { CheckCircle2, Clock, Upload, X } from "lucide-react"
 import { useMailNotification } from "@/hooks/useMailNotification"
+import { uploadFile } from "@/utils/cloudinary"
+import Image from "next/image"
 
 export default function KYCPage() {
   const router = useRouter()
@@ -22,6 +24,9 @@ export default function KYCPage() {
   const { notifyKycSubmission } = useMailNotification()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [kycStatus, setKycStatus] = useState<string | null>(null)
+  const [documentUrl, setDocumentUrl] = useState<string>("") 
+  const [isUploading, setIsUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const { register, handleSubmit: handleFormSubmit, formState: { errors }, reset, watch } = useForm({
     defaultValues: {
       fullName: "",
@@ -52,6 +57,11 @@ export default function KYCPage() {
             // If KYC data exists, check if it's approved or pending
             setKycStatus(userData.kycVerified ? "approved" : "pending")
             reset(userData.kycData)
+            
+            // Set document URL if it exists
+            if (userData.kycData.documentUrl) {
+              setDocumentUrl(userData.kycData.documentUrl)
+            }
           } else {
             // No KYC data submitted yet - show the form
             setKycStatus(null)
@@ -86,11 +96,27 @@ export default function KYCPage() {
 
   const onSubmit = async (data: any) => {
     if (!user) return
+    
+    if (!documentUrl) {
+      toast({
+        title: "Document Required",
+        description: "Please upload your identification document to proceed.",
+        variant: "destructive",
+      })
+      return
+    }
+    
     setIsSubmitting(true)
 
     try {
+      // Add document URL to the KYC data
+      const kycDataWithDocument = {
+        ...data,
+        documentUrl: documentUrl
+      }
+      
       await updateDoc(doc(db, "Users", user.uid), {
-        kycData: data,
+        kycData: kycDataWithDocument,
         kycVerified: false
       })
       setKycStatus("pending")
@@ -331,8 +357,92 @@ export default function KYCPage() {
                 </div>
               </div>
             </div>
+            
+            <div className="space-y-2 mt-6">
+              <Label htmlFor="document">Upload Identification Document</Label>
+              <div className="flex flex-col gap-3">
+                <input
+                  type="file"
+                  id="document"
+                  ref={fileInputRef}
+                  accept="image/*,.pdf"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      try {
+                        setIsUploading(true);
+                        const result = await uploadFile(file, 'KYC');
+                        setDocumentUrl(result.url);
+                        toast({
+                          title: "Upload Successful",
+                          description: "Your identification document has been uploaded.",
+                        });
+                      } catch (error) {
+                        toast({
+                          title: "Upload Failed",
+                          description: "Failed to upload document. Please try again.",
+                          variant: "destructive",
+                        });
+                      } finally {
+                        setIsUploading(false);
+                      }
+                    }
+                  }}
+                />
+                {documentUrl ? (
+                  <div className="relative w-full h-48 rounded-lg overflow-hidden border border-border">
+                    {documentUrl.endsWith('.pdf') ? (
+                      <div className="flex items-center justify-center h-full bg-gray-100 dark:bg-gray-800">
+                        <div className="text-center">
+                          <p className="font-medium">PDF Document Uploaded</p>
+                          <a href={documentUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline text-sm mt-2 inline-block">View Document</a>
+                        </div>
+                      </div>
+                    ) : (
+                      <Image 
+                        src={documentUrl}
+                        alt="Identification document"
+                        fill
+                        className="object-contain"
+                      />
+                    )}
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="absolute top-2 right-2 rounded-full"
+                      onClick={() => setDocumentUrl("")}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="rounded-2xl w-full h-24 border-dashed"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploading}
+                  >
+                    {isUploading ? (
+                      <div className="flex items-center gap-2">
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+                        <span>Uploading...</span>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-1">
+                        <Upload className="h-5 w-5 mb-1" />
+                        <span>Upload identification document</span>
+                        <span className="text-xs text-muted-foreground">PNG, JPG, JPEG or PDF (max 5MB)</span>
+                      </div>
+                    )}
+                  </Button>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">Please upload a clear photo or scan of your selected identification document.</p>
+            </div>
 
-            <Button type="submit" className="w-full text-white rounded-2xl" disabled={isSubmitting}>
+            <Button type="submit" className="w-full text-white rounded-2xl mt-6" disabled={isSubmitting || isUploading || !documentUrl}>
               {isSubmitting ? "Submitting..." : "Submit for Verification"}
             </Button>
           </form>
