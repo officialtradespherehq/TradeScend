@@ -1,9 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Check, Info, Copy } from "lucide-react"
+import { Check, Info, Copy, X } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -13,6 +13,8 @@ import { useInvestments, InvestmentData } from "@/hooks/useInvestments"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useTransactions } from "@/hooks/useTransactions"
+import { uploadFile } from "@/utils/cloudinary"
+import Image from "next/image"
 
 const PAYMENT_METHODS = [
   { name: 'Bitcoin', address: 'bc1qava56rr6ak6ee3fx0xte8gs4g42886flyn7klx' },
@@ -32,9 +34,11 @@ export default function PlansPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [paymentStep, setPaymentStep] = useState(1)
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(PAYMENT_METHODS[0])
-  const [transactionHash, setTransactionHash] = useState("")
+  const [receiptUrl, setReceiptUrl] = useState("")
+  const [isUploading, setIsUploading] = useState(false)
   const [amountError, setAmountError] = useState("")
   const [dialogOpen, setDialogOpen] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Get current active investment
   const currentInvestment = investments?.find(inv => inv.status === 'active')
@@ -83,10 +87,10 @@ export default function PlansPage() {
       return
     }
 
-    if (!transactionHash) {
+    if (!receiptUrl) {
       toast({
-        title: "Transaction Hash Required",
-        description: "Please provide the transaction hash to proceed.",
+        title: "Payment Receipt Required",
+        description: "Please upload your payment receipt to proceed.",
         variant: "destructive",
       })
       return
@@ -99,7 +103,8 @@ export default function PlansPage() {
         planName: selectedPlan?.name || '',
         amount: parseFloat(investmentAmount),
         paymentMethod: selectedPaymentMethod.name,
-        transactionHash,
+        transactionHash: "", // Empty string as we're using receiptUrl instead
+        receiptUrl: receiptUrl,
       }
 
       await create(investment)
@@ -121,7 +126,7 @@ export default function PlansPage() {
         setSelectedPlan(null)
         setInvestmentAmount("")
         setPaymentStep(1)
-        setTransactionHash("")
+        setReceiptUrl("")
         window.location.reload()
       }, 2000)
     } catch (error) {
@@ -170,6 +175,165 @@ export default function PlansPage() {
           <p className="text-muted-foreground">Choose the perfect plan for your investment goals.</p>
         </div>
 
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogContent className="sm:max-w-md rounded-[20px]">
+            <DialogHeader>
+              <DialogTitle>Invest in {selectedPlan?.name} Plan</DialogTitle>
+              <DialogDescription>
+                {paymentStep === 1
+                  ? `Enter the amount you want to invest. The minimum investment is ${selectedPlan?.price}.`
+                  : "Complete your payment and provide the transaction hash."}
+              </DialogDescription>
+            </DialogHeader>
+
+            {paymentStep === 1 ? (
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="amount">Investment Amount</Label>
+                  <Input
+                    id="amount"
+                    type="number"
+                    placeholder="Enter amount"
+                    value={investmentAmount}
+                    onChange={handleAmountChange}
+                    min={selectedPlan ? parseFloat(selectedPlan.price.replace(/[^0-9.]/g, '')) : 0}
+                    className={`rounded-2xl ${amountError ? 'border-destructive' : ''}`}
+                  />
+                  {amountError && (
+                    <p className="text-sm text-destructive">{amountError}</p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Info className="h-4 w-4" />
+                  <span>Expected monthly return: {selectedPlan?.features[1].split(":")[1].trim()}</span>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4 py-4">
+                <div className="p-4 bg-muted rounded-2xl">
+                  <p className="text-sm font-medium">Amount to Pay</p>
+                  <p className="text-2xl font-bold text-secondary">${investmentAmount}</p>
+                </div>
+                <Select defaultValue={PAYMENT_METHODS[0].name} onValueChange={(value) => setSelectedPaymentMethod(PAYMENT_METHODS.find(m => m.name === value) || PAYMENT_METHODS[0])}>
+                  <SelectTrigger className="w-full rounded-2xl">
+                    <SelectValue placeholder="Select payment method" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PAYMENT_METHODS.map((method) => (
+                      <SelectItem key={method.name} value={method.name}>
+                        {method.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Card className="rounded-[20px]">
+                  <CardContent className="space-y-4 pt-4">
+                    <div className="flex items-center justify-between">
+                      <Label>Payment Address</Label>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleCopyAddress(selectedPaymentMethod.address)}
+                        className="rounded-2xl"
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <Input readOnly value={selectedPaymentMethod.address} className="rounded-2xl font-mono text-sm" />
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="receipt">Payment Receipt</Label>
+                      <div className="flex flex-col gap-3">
+                        <input
+                          type="file"
+                          id="receipt"
+                          ref={fileInputRef}
+                          accept="image/*"
+                          className="hidden"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              try {
+                                setIsUploading(true);
+                                const result = await uploadFile(file);
+                                setReceiptUrl(result.url);
+                                toast({
+                                  title: "Upload Successful",
+                                  description: "Your payment receipt has been uploaded.",
+                                });
+                              } catch (error) {
+                                toast({
+                                  title: "Upload Failed",
+                                  description: "Failed to upload receipt. Please try again.",
+                                  variant: "destructive",
+                                });
+                              } finally {
+                                setIsUploading(false);
+                              }
+                            }
+                          }}
+                        />
+                        {receiptUrl ? (
+                          <div className="relative w-full h-48 rounded-lg overflow-hidden border border-border">
+                            <Image 
+                              src={receiptUrl}
+                              alt="Payment receipt"
+                              fill
+                              className="object-contain"
+                            />
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              className="absolute top-2 right-2 rounded-full"
+                              onClick={() => setReceiptUrl("")}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="rounded-2xl w-full h-24 border-dashed"
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={isUploading}
+                          >
+                            {isUploading ? (
+                              <div className="flex items-center gap-2">
+                                <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+                                <span>Uploading...</span>
+                              </div>
+                            ) : (
+                              <div className="flex flex-col items-center gap-1">
+                                <span>Click to upload payment receipt</span>
+                                <span className="text-xs text-muted-foreground">PNG, JPG or JPEG (max 5MB)</span>
+                              </div>
+                            )}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            <DialogFooter>
+              <Button
+                onClick={handleInvest}
+                disabled={paymentStep === 1 ? !investmentAmount || !!amountError : isSubmitting || isUploading || !receiptUrl}
+                className="rounded-2xl text-white"
+              >
+                {isSubmitting
+                  ? "Processing..."
+                  : paymentStep === 1
+                  ? "Proceed to Payment"
+                  : "Submit for Verification"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {plans.map((plan) => (
             <Card
@@ -195,115 +359,18 @@ export default function PlansPage() {
                     </li>
                   ))}
                 </ul>
-                <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button
-                      className="w-full rounded-2xl text-white"
-                      variant={plan.highlighted ? "secondary" : "outline"}
-                      onClick={() => {
-                        setSelectedPlan(plan)
-                        setPaymentStep(1)
-                        setAmountError("")
-                        setDialogOpen(true)
-                      }}
-                    >
-                      {plan.buttonText}
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-md rounded-[20px]">
-                    <DialogHeader>
-                      <DialogTitle>Invest in {plan.name} Plan</DialogTitle>
-                      <DialogDescription>
-                        {paymentStep === 1
-                          ? `Enter the amount you want to invest. The minimum investment is ${plan.price}.`
-                          : "Complete your payment and provide the transaction hash."}
-                      </DialogDescription>
-                    </DialogHeader>
-
-                    {paymentStep === 1 ? (
-                      <div className="space-y-4 py-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="amount">Investment Amount</Label>
-                          <Input
-                            id="amount"
-                            type="number"
-                            placeholder="Enter amount"
-                            value={investmentAmount}
-                            onChange={handleAmountChange}
-                            min={parseFloat(plan.price.replace(/[^0-9.]/g, ''))}
-                            className={`rounded-2xl ${amountError ? 'border-destructive' : ''}`}
-                          />
-                          {amountError && (
-                            <p className="text-sm text-destructive">{amountError}</p>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Info className="h-4 w-4" />
-                          <span>Expected monthly return: {plan.features[1].split(":")[1].trim()}</span>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-4 py-4">
-                        <div className="p-4 bg-muted rounded-2xl">
-                          <p className="text-sm font-medium">Amount to Pay</p>
-                          <p className="text-2xl font-bold text-secondary">${investmentAmount}</p>
-                        </div>
-                        <Select defaultValue={PAYMENT_METHODS[0].name} onValueChange={(value) => setSelectedPaymentMethod(PAYMENT_METHODS.find(m => m.name === value) || PAYMENT_METHODS[0])}>
-                          <SelectTrigger className="w-full rounded-2xl">
-                            <SelectValue placeholder="Select payment method" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {PAYMENT_METHODS.map((method) => (
-                              <SelectItem key={method.name} value={method.name}>
-                                {method.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Card className="rounded-[20px]">
-                          <CardContent className="space-y-4 pt-4">
-                            <div className="flex items-center justify-between">
-                              <Label>Payment Address</Label>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleCopyAddress(selectedPaymentMethod.address)}
-                                className="rounded-2xl"
-                              >
-                                <Copy className="h-4 w-4" />
-                              </Button>
-                            </div>
-                            <Input readOnly value={selectedPaymentMethod.address} className="rounded-2xl font-mono text-sm" />
-                            <div className="space-y-2">
-                              <Label htmlFor="hash">Transaction Hash</Label>
-                              <Input
-                                id="hash"
-                                placeholder="Enter your transaction hash"
-                                value={transactionHash}
-                                onChange={(e) => setTransactionHash(e.target.value)}
-                                className="rounded-2xl font-mono"
-                              />
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </div>
-                    )}
-
-                    <DialogFooter>
-                      <Button
-                        onClick={handleInvest}
-                        disabled={paymentStep === 1 ? !investmentAmount || !!amountError : isSubmitting}
-                        className="rounded-2xl text-white"
-                      >
-                        {isSubmitting
-                          ? "Processing..."
-                          : paymentStep === 1
-                          ? "Proceed to Payment"
-                          : "Submit for Verification"}
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
+                <Button
+                  className="w-full rounded-2xl text-white"
+                  variant={plan.highlighted ? "secondary" : "outline"}
+                  onClick={() => {
+                    setSelectedPlan(plan)
+                    setPaymentStep(1)
+                    setAmountError("")
+                    setDialogOpen(true)
+                  }}
+                >
+                  {plan.buttonText}
+                </Button>
               </CardContent>
             </Card>
           ))}
