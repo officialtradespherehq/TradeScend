@@ -322,11 +322,9 @@ export default function PrivacyPage() {
                     <br />
                     Attn: Privacy Officer
                     <br />
-                    123 Trading Street
+                    123 Washington Street
                     <br />
-                    Financial District
-                    <br />
-                    New York, NY 10004
+                    New York, NY 10006
                     <br />
                     Email: officialTradeScendhq@gmail.com
                   </p>
