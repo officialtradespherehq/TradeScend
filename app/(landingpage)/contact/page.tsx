@@ -232,9 +232,8 @@ export default function ContactPage() {
                     </div>
                     <div>
                       <h3 className="text-foreground font-medium">Office</h3>
-                      <p className="text-muted-foreground">123 Trading Street</p>
-                      <p className="text-muted-foreground">Financial District</p>
-                      <p className="text-muted-foreground">New York, NY 10004</p>
+                      <p className="text-muted-foreground">123 Washington Street</p>
+                      <p className="text-muted-foreground">New York, NY 10006</p>
                     </div>
                   </div>
                 </div>
