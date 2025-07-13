@@ -172,13 +172,13 @@ export const fetchCryptoData = async (): Promise<MarketData[]> => {
   
   // Return cached data if it's still valid
   if (cryptoCache.data.length > 0 && now - cryptoCache.timestamp < cryptoCache.expiryTime) {
-    console.log('Using cached crypto data');
+   //  console.log('Using cached crypto data');
     return cryptoCache.data;
   }
   
   try {
     // Fetch data from CoinGecko API
-    console.log('Fetching fresh crypto data from CoinGecko API');
+   //  console.log('Fetching fresh crypto data from CoinGecko API');
     const response = await fetch(
       "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,ripple,cardano,dogecoin&vs_currencies=usd&include_24h_change=true"
     );
@@ -281,7 +281,7 @@ export const fetchCryptoData = async (): Promise<MarketData[]> => {
     
     // If we have cached data, use it even if expired
     if (cryptoCache.data.length > 0) {
-      console.log('Using expired cache data as fallback');
+     //  console.log('Using expired cache data as fallback');
       return cryptoCache.data;
     }
     
@@ -290,97 +290,108 @@ export const fetchCryptoData = async (): Promise<MarketData[]> => {
   }
 };
 
+const ALPHA_VANTAGE_API_KEY = '496RQ7J4F7M4QOP7';
+const ALPHA_VANTAGE_BASE_URL = 'https://www.alphavantage.co/query';
+
+const STOCK_SYMBOLS = ["AAPL", "MSFT", "TSLA", "GOOGL"];
+
+async function fetchStockDataFromAlphaVantage(): Promise<MarketData[]> {
+  if (!ALPHA_VANTAGE_API_KEY) {
+    console.warn('Alpha Vantage API key not set. No stock data will be returned.');
+    return [];
+  }
+  try {
+    const results: MarketData[] = [];
+    for (const symbol of STOCK_SYMBOLS) {
+      const url = `${ALPHA_VANTAGE_BASE_URL}?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`;
+     //  console.log('Fetching stock data from:', url); // DEBUG
+      const response = await fetch(url);
+      const raw = await response.text();
+     //  console.log('Raw response:', raw); // DEBUG
+      if (!response.ok) throw new Error(`Alpha Vantage error: ${response.status}`);
+      const data = JSON.parse(raw);
+      if (data["Note"] || data["Error Message"]) {
+        console.error('Alpha Vantage API error:', data["Note"] || data["Error Message"]);
+        continue;
+      }
+      const quote = data["Global Quote"];
+      if (!quote) {
+        console.error(`No Global Quote for symbol ${symbol}:`, data);
+        continue;
+      }
+      const price = parseFloat(quote["05. price"]);
+      const change = parseFloat(quote["09. change"]);
+      const changePercent = parseFloat(quote["10. change percent"]?.replace('%',''));
+      const high24h = parseFloat(quote["03. high"]);
+      const low24h = parseFloat(quote["04. low"]);
+      const volume = quote["06. volume"];
+      // Generate chart data
+      const trend = change > 0 ? 'up' : change < 0 ? 'down' : 'sideways';
+      const volatility = 0.008;
+      const hourlyData = generateHistoricalData(price, volatility, 24, trend);
+      const weeklyData = generateWeeklyData(price, volatility * 2, trend);
+      const monthlyData = generateMonthlyData(price, volatility * 3, trend);
+      // Descriptions and colors as before
+      const meta = {
+        AAPL: {
+          name: "Apple Inc.",
+          color: "#E44D26",
+          marketCap: "$2.8T",
+          description: "Apple Inc. designs, manufactures, and markets smartphones, personal computers, tablets, wearables, and accessories worldwide."
+        },
+        MSFT: {
+          name: "Microsoft Corp.",
+          color: "#00A4EF",
+          marketCap: "$2.7T",
+          description: "Microsoft Corporation develops, licenses, and supports software, services, devices, and solutions worldwide."
+        },
+        TSLA: {
+          name: "Tesla Inc.",
+          color: "#E82127",
+          marketCap: "$556B",
+          description: "Tesla, Inc. designs, develops, manufactures, sells, and leases electric vehicles and energy generation and storage systems worldwide."
+        },
+        GOOGL: {
+          name: "Alphabet Inc.",
+          color: "#4285F4",
+          marketCap: "$2.1T",
+          description: "Alphabet Inc. provides various products and platforms in the United States, Europe, the Middle East, Africa, the Asia-Pacific, Canada, and Latin America."
+        }
+      };
+      const m = meta[symbol as keyof typeof meta];
+      results.push({
+        symbol,
+        name: m.name,
+        price,
+        change,
+        changePercent,
+        color: m.color,
+        type: "stock",
+        marketCap: m.marketCap,
+        volume,
+        high24h,
+        low24h,
+        description: m.description,
+        hourlyData,
+        weeklyData,
+        monthlyData
+      });
+    }
+    return results;
+  } catch (error) {
+    console.error('Error fetching stock data from Alpha Vantage:', error);
+    return [];
+  }
+}
+
 // Market data with price history
 export const fetchMarketData = async (): Promise<MarketData[]> => {
   // Fetch real crypto data from CoinGecko API
   const cryptoData = await fetchCryptoData();
-  
-  // For stocks, we'll still use simulated data
-  const stockAssets: MarketData[] = [
-    {
-      symbol: "AAPL",
-      name: "Apple Inc.",
-      price: 180.95 + (Math.random() * 4 - 2), // Add some randomness
-      change: 1.2,
-      changePercent: 1.2,
-      color: "#E44D26",
-      type: "stock",
-      marketCap: "$2.8T",
-      volume: "$12.5B",
-      high24h: 182.45,
-      low24h: 179.25,
-      description: "Apple Inc. designs, manufactures, and markets smartphones, personal computers, tablets, wearables, and accessories worldwide."
-    },
-    {
-      symbol: "MSFT",
-      name: "Microsoft Corp.",
-      price: 378.85 + (Math.random() * 6 - 3),
-      change: 0.8,
-      changePercent: 0.8,
-      color: "#00A4EF",
-      type: "stock",
-      marketCap: "$2.7T",
-      volume: "$10.2B",
-      high24h: 380.15,
-      low24h: 376.42,
-      description: "Microsoft Corporation develops, licenses, and supports software, services, devices, and solutions worldwide."
-    },
-    {
-      symbol: "TSLA",
-      name: "Tesla Inc.",
-      price: 175.25 + (Math.random() * 5 - 2.5),
-      change: 2.3,
-      changePercent: 2.3,
-      color: "#E82127",
-      type: "stock",
-      marketCap: "$556B",
-      volume: "$8.7B",
-      high24h: 177.50,
-      low24h: 173.10,
-      description: "Tesla, Inc. designs, develops, manufactures, sells, and leases electric vehicles and energy generation and storage systems worldwide."
-    },
-    {
-      symbol: "GOOGL",
-      name: "Alphabet Inc.",
-      price: 165.78 + (Math.random() * 4 - 2),
-      change: 1.5,
-      changePercent: 1.5,
-      color: "#4285F4",
-      type: "stock",
-      marketCap: "$2.1T",
-      volume: "$9.3B",
-      high24h: 167.20,
-      low24h: 164.50,
-      description: "Alphabet Inc. provides various products and platforms in the United States, Europe, the Middle East, Africa, the Asia-Pacific, Canada, and Latin America."
-    }
-  ];
-  
-  // Generate chart data for stock assets
-  const stocksWithChartData = stockAssets.map(asset => {
-    // Determine trend based on change
-    const trend = asset.change > 0 ? 'up' : asset.change < 0 ? 'down' : 'sideways';
-    const volatility = 0.008; // Stocks are less volatile than crypto
-    
-    // Generate historical data for different time periods
-    const hourlyData = generateHistoricalData(asset.price, volatility, 24, trend);
-    const weeklyData = generateWeeklyData(asset.price, volatility * 2, trend);
-    const monthlyData = generateMonthlyData(asset.price, volatility * 3, trend);
-    
-    // Calculate actual change based on first and last data points
-    const firstPoint = hourlyData[0].value;
-    const lastPoint = hourlyData[hourlyData.length - 1].value;
-    const actualChange = ((lastPoint - firstPoint) / firstPoint) * 100;
-    
-    return {
-      ...asset,
-      change: parseFloat(actualChange.toFixed(2)),
-      changePercent: parseFloat(actualChange.toFixed(2)),
-      hourlyData,
-      weeklyData,
-      monthlyData
-    };
-  });
-  
+
+  // Fetch real stock data from Alpha Vantage (fallback to simulated if needed)
+  const stocksWithChartData = await fetchStockDataFromAlphaVantage();
+
   // Combine crypto and stock data
   return [...cryptoData, ...stocksWithChartData];
 };
