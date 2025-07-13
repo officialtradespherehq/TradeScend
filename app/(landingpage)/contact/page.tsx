@@ -49,36 +49,7 @@ export default function ContactPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-background/95">
-      <ParticleBackground />
-      <AnimatedGradientBackground />
-
-      <header className="border-b border-border backdrop-blur-sm bg-background/70 sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="bg-secondary p-2 rounded-full">
-              <TrendingUp className="h-6 w-6 text-accent" />
-            </div>
-            <span className="text-2xl font-bold text-foreground">TradeScend</span>
-          </Link>
-          <nav className="hidden md:flex items-center space-x-8">
-            <Link href="/" className="text-muted-foreground hover:text-foreground transition-colors">
-              Home
-            </Link>
-            <Link href="/#plans" className="text-muted-foreground hover:text-foreground transition-colors">
-              Investment Plans
-            </Link>
-            <Link href="/#trends" className="text-muted-foreground hover:text-foreground transition-colors">
-              Market Trends
-            </Link>
-            <Link href="/#testimonials" className="text-muted-foreground hover:text-foreground transition-colors">
-              Testimonials
-            </Link>
-          </nav>
-          <div className="flex items-center gap-4">
-            <ThemeToggle />
-          </div>
-        </div>
-      </header>
+      
 
       <main className="py-16">
         <div className="container mx-auto px-4">
