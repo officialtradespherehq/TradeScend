@@ -285,41 +285,7 @@ export default function ContactPage() {
         </div>
       </main>
 
-      <footer className="bg-background border-t border-border py-12">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col items-center justify-center">
-            <div className="flex items-center gap-2 mb-6">
-              <div className="bg-secondary p-2 rounded-full">
-                <TrendingUp className="h-5 w-5 text-accent" />
-              </div>
-              <span className="text-xl font-bold text-foreground">TradeScend</span>
-            </div>
-            <div className="flex flex-wrap justify-center gap-8 mb-8">
-              <Link href="/contact" className="text-muted-foreground hover:text-secondary">
-                Contact
-              </Link>
-              <Link href="/faqs" className="text-muted-foreground hover:text-secondary">
-                FAQs
-              </Link>
-              <Link href="/terms" className="text-muted-foreground hover:text-secondary">
-                Terms of Service
-              </Link>
-              <Link href="/privacy" className="text-muted-foreground hover:text-secondary">
-                Privacy Policy
-              </Link>
-              <div className="flex items-center">
-                <ThemeToggle />
-              </div>
-            </div>
-            <div className="border-t border-border w-full max-w-2xl pt-8 mt-4 text-center">
-              <p className="text-muted-foreground text-sm">
-                © {new Date().getFullYear()} TradeScend. All rights reserved.
-              </p>
-              <p className="text-muted-foreground text-sm mt-2">Trading involves risk. Invest responsibly.</p>
-            </div>
-          </div>
-        </div>
-      </footer>
+     
     </div>
   )
 }
