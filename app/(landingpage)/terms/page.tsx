@@ -326,14 +326,12 @@ export default function TermsPage() {
                 <h2 className="text-2xl font-semibold text-foreground mb-4">14. Contact Information</h2>
                 <div className="space-y-4 text-muted-foreground">
                   <p>If you have any questions about these Terms, please contact us at:</p>
-                  <p>
+                   <p>
                     TradeScend Inc.
                     <br />
-                    123 Trading Street
+                    123 Washington Street
                     <br />
-                    Financial District
-                    <br />
-                    New York, NY 10004
+                    New York, NY 10006
                     <br />
                     Email: officialTradeScendhq@gmail.com
                   </p>
