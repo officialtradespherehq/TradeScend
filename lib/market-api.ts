@@ -290,41 +290,40 @@ export const fetchCryptoData = async (): Promise<MarketData[]> => {
   }
 };
 
-const ALPHA_VANTAGE_API_KEY = '496RQ7J4F7M4QOP7';
-const ALPHA_VANTAGE_BASE_URL = 'https://www.alphavantage.co/query';
+const FINNHUB_API_KEY = 'd1q1tjpr01qrh89nlb8gd1q1tjpr01qrh89nlb90';
+const FINNHUB_BASE_URL = 'https://finnhub.io/api/v1/quote';
 
 const STOCK_SYMBOLS = ["AAPL", "MSFT", "TSLA", "GOOGL"];
 
-async function fetchStockDataFromAlphaVantage(): Promise<MarketData[]> {
-  if (!ALPHA_VANTAGE_API_KEY) {
-    console.warn('Alpha Vantage API key not set. No stock data will be returned.');
+// In-memory cache for stock data
+let stockCache: { data: MarketData[]; timestamp: number } = { data: [], timestamp: 0 };
+const STOCK_CACHE_EXPIRY = 60 * 60 * 1000; // 1 hour
+
+async function fetchStockDataFromFinnhub(): Promise<MarketData[]> {
+  const now = Date.now();
+  if (stockCache.data.length > 0 && now - stockCache.timestamp < STOCK_CACHE_EXPIRY) {
+    return stockCache.data;
+  }
+  if (!FINNHUB_API_KEY) {
+    console.warn('Finnhub API key not set. No stock data will be returned.');
     return [];
   }
   try {
     const results: MarketData[] = [];
     for (const symbol of STOCK_SYMBOLS) {
-      const url = `${ALPHA_VANTAGE_BASE_URL}?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`;
-     //  console.log('Fetching stock data from:', url); // DEBUG
+      const url = `${FINNHUB_BASE_URL}?symbol=${symbol}&token=${FINNHUB_API_KEY}`;
       const response = await fetch(url);
-      const raw = await response.text();
-     //  console.log('Raw response:', raw); // DEBUG
-      if (!response.ok) throw new Error(`Alpha Vantage error: ${response.status}`);
-      const data = JSON.parse(raw);
-      if (data["Note"] || data["Error Message"]) {
-        console.error('Alpha Vantage API error:', data["Note"] || data["Error Message"]);
+      const data = await response.json();
+      if (data.error) {
+        console.error(`Finnhub error for ${symbol}:`, data.error);
         continue;
       }
-      const quote = data["Global Quote"];
-      if (!quote) {
-        console.error(`No Global Quote for symbol ${symbol}:`, data);
-        continue;
-      }
-      const price = parseFloat(quote["05. price"]);
-      const change = parseFloat(quote["09. change"]);
-      const changePercent = parseFloat(quote["10. change percent"]?.replace('%',''));
-      const high24h = parseFloat(quote["03. high"]);
-      const low24h = parseFloat(quote["04. low"]);
-      const volume = quote["06. volume"];
+      // Finnhub fields: c=current, d=change, dp=change %, h=high, l=low, o=open, pc=prev close
+      const price = data.c;
+      const change = data.d;
+      const changePercent = data.dp;
+      const high24h = data.h;
+      const low24h = data.l;
       // Generate chart data
       const trend = change > 0 ? 'up' : change < 0 ? 'down' : 'sideways';
       const volatility = 0.008;
@@ -368,7 +367,7 @@ async function fetchStockDataFromAlphaVantage(): Promise<MarketData[]> {
         color: m.color,
         type: "stock",
         marketCap: m.marketCap,
-        volume,
+        volume: undefined,
         high24h,
         low24h,
         description: m.description,
@@ -377,9 +376,10 @@ async function fetchStockDataFromAlphaVantage(): Promise<MarketData[]> {
         monthlyData
       });
     }
+    stockCache = { data: results, timestamp: now };
     return results;
   } catch (error) {
-    console.error('Error fetching stock data from Alpha Vantage:', error);
+    console.error('Error fetching stock data from Finnhub:', error);
     return [];
   }
 }
@@ -389,8 +389,8 @@ export const fetchMarketData = async (): Promise<MarketData[]> => {
   // Fetch real crypto data from CoinGecko API
   const cryptoData = await fetchCryptoData();
 
-  // Fetch real stock data from Alpha Vantage (fallback to simulated if needed)
-  const stocksWithChartData = await fetchStockDataFromAlphaVantage();
+  // Fetch real stock data from Finnhub (with cache)
+  const stocksWithChartData = await fetchStockDataFromFinnhub();
 
   // Combine crypto and stock data
   return [...cryptoData, ...stocksWithChartData];
