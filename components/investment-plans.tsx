@@ -8,16 +8,16 @@ export const plans = [
   {
     name: "Quantum",
     description: "Strategic wealth building",
-    price: "$1,000",
+    price: "$50",
     features: [
-      "Investment range: $1K-$10K",
+      "Investment range: $50-$10K",
       "Monthly ROI: 15%",
       "Real-time market analysis",
       "24/7 support",
       "Weekly market insights",
     ],
     highlighted: false,
-    buttonText: "Start with $1K",
+    buttonText: "Start with $50",
   },
   {
     name: "Apex",
