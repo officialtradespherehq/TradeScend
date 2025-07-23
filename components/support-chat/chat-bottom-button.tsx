@@ -147,7 +147,7 @@ export default function ChatBottomButton() {
                 <MessageSquare className="h-4 w-4" />
               </div>
               <div>
-                <h3 className="font-medium text-sm">TradeSphere Support</h3>
+                <h3 className="font-medium text-sm">TradeScend Support</h3>
                 <p className="text-xs text-white/80">We typically reply within minutes</p>
               </div>
             </div>
