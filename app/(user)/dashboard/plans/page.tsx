@@ -87,14 +87,14 @@ export default function PlansPage() {
       return
     }
 
-    if (!receiptUrl) {
-      toast({
-        title: "Payment Receipt Required",
-        description: "Please upload your payment receipt to proceed.",
-        variant: "destructive",
-      })
-      return
-    }
+    // if (!receiptUrl) {
+    //   toast({
+    //     title: "Payment Receipt Required",
+    //     description: "Please upload your payment receipt to proceed.",
+    //     variant: "destructive",
+    //   })
+    //   return
+    // }
 
     setIsSubmitting(true)
     try {
@@ -241,7 +241,7 @@ export default function PlansPage() {
                     </div>
                     <Input readOnly value={selectedPaymentMethod.address} className="rounded-2xl font-mono text-sm" />
                     
-                    <div className="space-y-2">
+                    {/* <div className="space-y-2">
                       <Label htmlFor="receipt">Payment Receipt</Label>
                       <div className="flex flex-col gap-3">
                         <input
@@ -312,7 +312,7 @@ export default function PlansPage() {
                           </Button>
                         )}
                       </div>
-                    </div>
+                    </div> */}
                   </CardContent>
                 </Card>
               </div>
@@ -321,7 +321,7 @@ export default function PlansPage() {
             <DialogFooter>
               <Button
                 onClick={handleInvest}
-                disabled={paymentStep === 1 ? !investmentAmount || !!amountError : isSubmitting || isUploading || !receiptUrl}
+                disabled={paymentStep === 1 ? !investmentAmount || !!amountError : isSubmitting || isUploading}
                 className="rounded-2xl text-white"
               >
                 {isSubmitting
