@@ -180,7 +180,7 @@ export default function SupportChatButton() {
                 <MessageSquare className="h-5 w-5" />
               </div>
               <div>
-                <h3 className="font-medium">TradeSphere Support</h3>
+                <h3 className="font-medium">TradeScend Support</h3>
                 <p className="text-xs text-white/80">We typically reply within minutes</p>
               </div>
             </div>
