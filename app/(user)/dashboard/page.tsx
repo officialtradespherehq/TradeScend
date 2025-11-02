@@ -61,7 +61,7 @@ export default function DashboardPage() {
     invPage * invPerPage
   ) || [];
   const [withdrawOpen, setWithdrawOpen] = useState(false);
-  const { submitWithdraw, loading, error, canWithdraw } = useWithdraw();
+  const { submitWithdraw, loading, error } = useWithdraw();
   
   // Market data state
   const [marketData, setMarketData] = useState<MarketData[]>([]);
@@ -263,14 +263,12 @@ export default function DashboardPage() {
                     <div className="flex gap-3">
                       <Button
                         variant="secondary"
-                        disabled={!user?.kycVerified || balance <= 0 || !canWithdraw}
+                        disabled={!user?.kycVerified || balance <= 0}
                         title={
                           !user?.kycVerified
                             ? "KYC verification required for withdrawals"
                             : balance <= 0
                             ? "No funds available for withdrawal"
-                            : !canWithdraw
-                            ? "You can only withdraw after your investments have matured for 30 days"
                             : ""
                         }
                         className="flex items-center gap-2 text-white border-white/20 rounded-xl hover:bg-white/10 transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
