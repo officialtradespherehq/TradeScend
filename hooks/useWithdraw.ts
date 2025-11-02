@@ -2,17 +2,14 @@ import { useEffect, useState } from "react";
 import { collection, addDoc, Timestamp, doc, getDoc, updateDoc, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "./use-auth";
-import { useInvestments } from "./useInvestments";
 import { useMailNotification } from "./useMailNotification";
 
 export function useWithdraw() {
   const { user } = useAuth();
-  const { investments } = useInvestments();
   const { notifyWithdrawal } = useMailNotification();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
-  const [canWithdraw, setCanWithdraw] = useState(false);
 
   useEffect(() => {
     const fetchName = async () => {
@@ -28,19 +25,8 @@ export function useWithdraw() {
     fetchName()
   }, [user])
   
-  // Check if user has any completed investments (matured for 30 days)
-  useEffect(() => {
-    if (!user || !investments.length) return;
-    
-    // User can withdraw if they have at least one completed investment
-    // or if they have an active investment that's older than 30 days
-    const hasCompletedInvestment = investments.some(inv => 
-      inv.status === 'completed' || 
-      (inv.status === 'active' && inv.daysRemaining === 0)
-    );
-    
-    setCanWithdraw(hasCompletedInvestment);
-  }, [user, investments]);
+  // NOTE: maturity-based withdraw restrictions removed — withdrawals
+  // will be controlled by KYC and balance checks only in the UI.
 
   const submitWithdraw = async (amount: number, wallet: string, coin: string) => {
     setLoading(true)
@@ -70,11 +56,8 @@ export function useWithdraw() {
         return false;
       }
       
-      // Check if user has any completed investments
-      if (!canWithdraw) {
-        setError("You can only withdraw after your investments have matured for 30 days");
-        return false;
-      }
+      // Maturity check removed — allow withdrawal if balance and other
+      // validations pass. Any business rules should be enforced server-side.
       
       // Create withdrawal request in the withdrawals collection
       // This will be the single source of truth for withdrawals
@@ -125,5 +108,5 @@ export function useWithdraw() {
     }
   };
 
-  return { submitWithdraw, loading, error, canWithdraw };
+  return { submitWithdraw, loading, error };
 }
