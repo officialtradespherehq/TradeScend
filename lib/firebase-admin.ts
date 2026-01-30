@@ -1,4 +1,4 @@
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
 import { getAuth, Auth } from 'firebase-admin/auth';
 
 // Validate required environment variables
@@ -24,7 +24,7 @@ if (missingEnvVars.length > 0) {
   }
 }
 
-let app;
+let app: App;
 let auth: Auth;
 
 try {
@@ -37,7 +37,7 @@ try {
     }),
   };
 
-  app = !getApps().length ? initializeApp(firebaseAdminConfig) : getApps()[0];
+  app = !getApps().length ? initializeApp(firebaseAdminConfig) : getApps()[0] as App;
   auth = getAuth(app);
 } catch (error) {
   console.error('Error initializing Firebase Admin SDK:', error);
