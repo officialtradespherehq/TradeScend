@@ -66,18 +66,49 @@ export async function POST(request: NextRequest) {
       }
 
       // Verify the code
-      const isValid = verifySync({
+      const result = verifySync({
         token: code,
         secret: userData.twoFactorSecret,
       });
 
-      if (isValid) {
+      // verifySync returns a VerifyResult object with a 'valid' property
+      if (result.valid === true) {
         // Enable 2FA
         await userRef.update({
           twoFactorEnabled: true,
         });
         
         return NextResponse.json({ success: true, message: '2FA enabled successfully' });
+      } else {
+        return NextResponse.json({ error: 'Invalid verification code' }, { status: 400 });
+      }
+    }
+
+    if (action === 'verify-login') {
+      if (!code) {
+        return NextResponse.json({ error: 'Verification code is required' }, { status: 400 });
+      }
+
+      const userDoc = await userRef.get();
+      const userData = userDoc.data();
+      
+      if (!userData?.twoFactorSecret) {
+        return NextResponse.json({ error: 'No 2FA secret found.' }, { status: 400 });
+      }
+
+      if (!userData?.twoFactorEnabled) {
+        return NextResponse.json({ error: '2FA is not enabled for this account.' }, { status: 400 });
+      }
+
+      // Verify the code (for login, we just verify without enabling)
+      const result = verifySync({
+        token: code,
+        secret: userData.twoFactorSecret,
+      });
+
+      // verifySync returns a VerifyResult object with a 'valid' property
+      if (result.valid === true) {
+        return NextResponse.json({ success: true, message: '2FA verification successful' });
       } else {
         return NextResponse.json({ error: 'Invalid verification code' }, { status: 400 });
       }
