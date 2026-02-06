@@ -20,15 +20,15 @@ type NotificationData = {
   kycData?: any;
 };
 
-// Create a reusable transporter object using Zeptomail API
+// Create a reusable transporter object using Gmail SMTP
 const createTransporter = () => {
   const transporter = nodemailer.createTransport({
-    host: 'smtp.zeptomail.com',
+    host: 'smtp.gmail.com',
     port: 587,
-    secure: false, // true for 465, false for other ports
+    secure: false,
     auth: {
-      user: process.env.ZEPTOMAIL_SENDER_EMAIL,
-      pass: process.env.ZEPTOMAIL_API_KEY,
+      user: process.env.GMAIL_USER,
+      pass: process.env.GMAIL_APP_PASSWORD,
     },
   });
 
@@ -38,7 +38,7 @@ const createTransporter = () => {
 // Helper function to get email subject and body based on notification type
 const getEmailContent = (type: NotificationType, data: NotificationData) => {
   const adminEmail = process.env.ADMIN_EMAIL;
-  const senderName = process.env.ZEPTOMAIL_SENDER_NAME || 'TradeScend';
+  const senderName = process.env.SMTP_FROM_NAME || 'TradeScend';
   
   switch (type) {
     case 'registration':
@@ -149,7 +149,7 @@ const sendNotification = async (type: NotificationType, data: NotificationData) 
     
     // Send mail with defined transport object
     const info = await transporter.sendMail({
-      from: `"${process.env.ZEPTOMAIL_SENDER_NAME}" <${process.env.ZEPTOMAIL_SENDER_EMAIL}>`,
+      from: `"${process.env.SMTP_FROM_NAME || 'TradeScend'}" <${process.env.GMAIL_USER}>`,
       to: emailContent.to,
       subject: emailContent.subject,
       html: emailContent.html,
